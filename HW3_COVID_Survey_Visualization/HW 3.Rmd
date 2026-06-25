@@ -1,0 +1,527 @@
+---
+title: "HW 3"
+author: "Tallapaneni Venkateshwara Chowdary"
+date: "2024-10-28"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(ggtext)
+library(tidyr)
+library(ggpubr)
+library(jpeg)
+library(scales)
+
+# read the data
+income <- read.csv("data/income.csv")
+
+```
+
+Question 1's Answer:
+```{r}
+income1 <- income |> 
+  unite(Class, c(Class, Average_Income), sep = " | ", remove = FALSE) %>%
+  # reordering the y-axis values
+  mutate(Class = fct_relevel(Class, 
+            "$1000 AND OVER | 1125", "$750-1000 | 880", "$500-750 | 547", 
+            "$400-500 | 433.82", "$300-400 | 335.66", "$200-300 | 249.45", 
+            "$100-200 | 139.1")) %>%
+  select(-Average_Income) %>%
+  pivot_longer(
+    cols = !Class,
+    names_to = "Expense_Type", 
+    values_to = "Values"
+  )
+
+# Reording expense types to be the same as in the picture 
+income1$ANNUAL_EXPENDITURE_FOR <- factor(income1$Expense_Type, levels = c('Rent', 'Food', 'Clothes', 'Tax', 'Other'),ordered = TRUE)
+
+# Calculating the Percentage of each expense
+income1 <- income1 %>%
+  group_by(Class) %>%
+  mutate(Percentage = Values / sum(Values) * 100) %>%
+  ungroup()
+
+img <- readJPEG("paper-3653357_1920.jpg")
+
+  income1 |>
+  ggplot(aes(fill=ANNUAL_EXPENDITURE_FOR, y=Class, x=Values)) + 
+   background_image(img)+
+    geom_bar(stat="identity", position = position_fill(reverse = TRUE)) +
+    geom_text(aes(label = paste0(round(Percentage, 1), "%")), 
+            position = position_fill(vjust = 0.5, reverse = TRUE), 
+            color = "grey90", size = 3, 
+            data = income1) +
+  theme(legend.position = "top",
+        # I couldn't get the background as image so I imitated the color
+        plot.background = element_rect(fill = "#e8c079"),
+        legend.background = element_rect(fill = "#e8c079")) +
+  scale_fill_manual(values=c("#141718", "#7a557c", "#de9f8c" , "#a59f9b" , "#cab9a7")) +
+  labs(
+    title = "INCOME AND EXPENDITURE OF 150 NEGRO FAMILIES IN ATLANTA,GA.,U.S.A", 
+    fill = "ANNUAL EXPENDITURE FOR ", 
+    y = 'Class | ACTUAL AVERAGE',
+    x = "FOR FURTHER STATISTICS RAISE THIS FRAME/Expense Percentage "
+  )
+```
+
+Question 2's Answer:
+  From the plot, I can safely say that absolutely no one regardless of race, Gender, Race, Ethnicity, and Profession trust the information about the vaccines due to the low response scores. We can also say that Native Hawaiians and Asians are the same in regard to their view about recommending vaccine to others - a strong 'NO'. Finally the information that shocked me the most that 21-25 and 26-30 include the people who are least confident in the scientific vetting process of the vaccines because I assumed these age groups have the most literates - Undergraduates and Graduates and they would have the most confidence in the vetting process.
+
+
+Question 3's Answer:
+```{r}
+# Cleaning up the csv data
+survey_data <- read.csv("data/covid-survey.csv")
+colnames(survey_data) <- survey_data[1, ]
+survey_data <- survey_data[-1, ]
+rownames(survey_data) <- NULL
+head(survey_data)
+```
+
+```{r}
+survey_data <- survey_data %>%
+  mutate(
+    across(starts_with("resp_"), as.numeric),
+    exp_age_bin = as.numeric(exp_age_bin),
+    exp_gender = as.factor(exp_gender),
+    exp_race = as.factor(exp_race),
+    exp_ethnicity = as.factor(exp_ethnicity),
+    exp_profession = as.factor(exp_profession),
+    exp_flu_vax = as.factor(exp_flu_vax),
+    exp_already_vax = as.factor(exp_already_vax)
+  )
+```
+
+```{r}
+# Create bins for explanatory variables with corresponding labels
+survey_data <- survey_data %>%
+  mutate(
+    exp_age_bin = factor(exp_age_bin, levels = c("0", "20", "25", "30"), 
+                         labels = c("<20", "21-25", "26-30", ">30")),
+    
+    exp_gender = factor(exp_gender, levels = c("0", "1", "3", "4"),  
+                        labels = c("Male", "Female", "Non-binary / third gender", "Prefer not to say")),
+  
+    exp_race = factor(exp_race, levels = c("1", "2", "3", "4", "5"), 
+                      labels = c("American Indian/Alaska Native", "Asian", 
+                                 "Black/African American", "Native Hawaiian/Other Pacific Islander", "White")),
+
+    exp_ethnicity = factor(exp_ethnicity, levels = c("1", "2"), 
+                           labels = c("Hispanic/Latino", "Non-Hispanic/Non-Latino")),
+
+    exp_profession = factor(exp_profession, levels = c("0", "1"), 
+                            labels = c("Medical", "Nursing")),
+
+    exp_already_vax = factor(exp_already_vax, levels = c("0", "1"), 
+                             labels = c("No", "Yes")),
+
+    exp_flu_vax = factor(exp_flu_vax, levels = c("0", "1"), 
+                         labels = c("No", "Yes"))
+  )
+```
+
+
+```{r}
+# Pivot the data longer twice
+covid_survey_longer <- survey_data %>%
+  pivot_longer(
+    cols = starts_with("exp_"),
+    names_to = "explanatory",
+    values_to = "explanatory_value"
+  ) %>%
+  filter(!is.na(explanatory_value)) %>%
+  pivot_longer(
+    cols = starts_with("resp_"),
+    names_to = "response",
+    values_to = "response_value"
+  )
+```
+
+
+```{r}
+# Calculate summary statistics by grouping by each explanatory and response variable
+covid_survey_summary_stats_by_group <- covid_survey_longer %>%
+  group_by(explanatory, explanatory_value, response) %>%
+  summarize(
+    mean = mean(as.numeric(response_value), na.rm = TRUE),
+    low = quantile(as.numeric(response_value), 0.10, na.rm = TRUE),
+    high = quantile(as.numeric(response_value), 0.90, na.rm = TRUE)
+  )
+```
+
+
+```{r}
+# Calculate summary statistics without conditioning on explanatory variables
+covid_survey_summary_stats_all <- covid_survey_longer %>%
+  group_by(response) %>%
+  summarize(
+    mean = mean(as.numeric(response_value), na.rm = TRUE),
+    low = quantile(as.numeric(response_value), 0.10, na.rm = TRUE),
+    high = quantile(as.numeric(response_value), 0.90, na.rm = TRUE),
+    explanatory = "All",
+    explanatory_value = ""
+  )
+```
+
+
+```{r}
+# Combine both sets of summary statistics
+covid_survey_summary_stats <- bind_rows(
+  covid_survey_summary_stats_all,
+  covid_survey_summary_stats_by_group
+)
+```
+
+
+```{r}
+# Update the mapping for response labels with full texts in a smaller font size
+response_labels <- c(
+  "resp_safety" = "Based on my understanding, I believe the vaccine is safe.",
+  "resp_feel_safe_at_work" = "Getting the vaccine will make me feel safer at work",
+  "resp_concern_safety" = "I am concerned about the safety and side effects of the vaccine",
+  "resp_confidence_science" = "I am confident in the scientific vetting process for the new COVID vaccines.",
+  "resp_trust_info" = "I trust the information that I have received about the COVID-19 vaccines.",
+  "resp_will_recommend" = "I will recommend the vaccine to family, friends, and community members"
+)
+```
+
+
+```{r}
+# Define the order for the response and explanatory variables in covid_survey_summary_stats
+covid_survey_summary_stats <- covid_survey_summary_stats %>%
+  mutate(
+    response = factor(response, levels = c(
+      "resp_safety",  # Based on my understanding, I believe the vaccine is safe.
+      "resp_feel_safe_at_work",  # Getting the vaccine will make me feel safer at work
+      "resp_concern_safety",  # I am concerned about the safety and side effects of the vaccine
+      "resp_confidence_science",  # I am confident in the scientific vetting process for the new COVID vaccines.
+      "resp_trust_info",  # I trust the information that I have received about the COVID-19 vaccines.
+      "resp_will_recommend"  # I will recommend the vaccine to family, friends, and community members
+    )),
+    explanatory = factor(explanatory, levels = c(
+      "All", "exp_age_bin", "exp_gender", "exp_race", "exp_ethnicity", 
+      "exp_profession", "exp_already_vax", "exp_flu_vax"
+    ))
+  )
+```
+
+```{r}
+# Define the mapping for explanatory labels
+explanatory_labels <- c(
+  "exp_age_bin" = "Age",
+  "exp_gender" = "Gender",
+  "exp_race" = "Race",
+  "exp_ethnicity" = "Ethnicity",
+  "exp_profession" = "Profession",
+  "exp_already_vax" = "Had COVID vaccine",
+  "exp_flu_vax" = "Had flu vaccine this year"
+)
+```
+
+```{r fig.width=14, fig.height=9}
+# Plot the updated data with full text labels
+ggplot(covid_survey_summary_stats, aes(x = mean, y = explanatory_value, color = explanatory_value)) +
+  geom_point(color = "black") +
+  geom_errorbarh(aes(xmin = low, xmax = high), height = 0.2, color = "black") +
+  facet_grid(
+    explanatory ~ response,
+    scales = "free_y",
+    labeller = labeller(
+      response = as_labeller(response_labels, default = label_wrap_gen(width = 35)), 
+      explanatory = as_labeller(explanatory_labels)
+    )
+  ) +
+  theme_minimal() +
+  labs(
+    title = "Survey Responses on COVID-19 Vaccines",
+    subtitle = "Mean Likert Score with 10th to 90th Percentile Error Bars",
+    x = "Mean Likert Score",
+    y = NULL
+  ) +
+  theme(
+    strip.background = element_rect(fill = "gray90"),
+    strip.text.y = element_text(angle = 0),
+    strip.text.x = element_text(size = 8),  # Smaller font size for facet titles
+    legend.position = "none"
+  )
+```
+
+Question 4's Answer:
+```{r fig.width=14, fig.height=9}
+# Calculate summary statistics by grouping by each explanatory and response variable
+covid_survey_summary_stats_by_group_quartiles <- covid_survey_longer %>%
+  group_by(explanatory, explanatory_value, response) %>%
+  summarize(
+    mean = mean(as.numeric(response_value), na.rm = TRUE),
+    low = quantile(as.numeric(response_value), 0.25, na.rm = TRUE),  # 25th percentile
+    high = quantile(as.numeric(response_value), 0.75, na.rm = TRUE)  # 75th percentile
+  )
+```
+
+```{r}
+# Calculate summary statistics without conditioning on explanatory variables
+covid_survey_summary_stats_all_quartiles <- covid_survey_longer %>%
+  group_by(response) %>%
+  summarize(
+    mean = mean(as.numeric(response_value), na.rm = TRUE),
+    low = quantile(as.numeric(response_value), 0.25, na.rm = TRUE),  # 25th percentile
+    high = quantile(as.numeric(response_value), 0.75, na.rm = TRUE),  # 75th percentile
+    explanatory = "All",
+    explanatory_value = ""
+  )
+```
+
+```{r}
+# Combine both sets of summary statistics
+covid_survey_summary_stats_quartiles <- bind_rows(
+  covid_survey_summary_stats_all_quartiles,
+  covid_survey_summary_stats_by_group_quartiles
+)
+```
+
+```{r}
+# Define the order for the response and explanatory variables in covid_survey_summary_stats_quartiles
+covid_survey_summary_stats_quartiles <- covid_survey_summary_stats_quartiles %>%
+  mutate(
+    response = factor(response, levels = c(
+      "resp_safety", 
+      "resp_feel_safe_at_work",  
+      "resp_concern_safety",  
+      "resp_confidence_science",  
+      "resp_trust_info",  
+      "resp_will_recommend"  
+    )),
+    explanatory = factor(explanatory, levels = c(
+      "All", "exp_age_bin", "exp_gender", "exp_race", "exp_ethnicity", 
+      "exp_profession", "exp_already_vax", "exp_flu_vax"
+    ))
+  )
+```
+
+```{r}
+# Plot the updated data with 25th and 75th percentiles
+ggplot(covid_survey_summary_stats_quartiles, aes(x = mean, y = explanatory_value, color = explanatory_value)) +
+  geom_point(color = "black") +
+  geom_errorbarh(aes(xmin = low, xmax = high), height = 0.2, color = "black") +
+  facet_grid(
+    explanatory ~ response,
+    scales = "free_y",
+    labeller = labeller(
+      response = as_labeller(response_labels, default = label_wrap_gen(width = 35)), 
+      explanatory = as_labeller(explanatory_labels)
+    )
+  ) +
+  theme_minimal() +
+  labs(
+    title = "Survey Responses on COVID-19 Vaccines (Quartiles)",
+    subtitle = "Mean Likert Score with 25th to 75th Percentile Error Bars",
+    x = "Mean Likert Score",
+    y = NULL
+  ) +
+  theme(
+    strip.background = element_rect(fill = "gray90"),
+    strip.text.y = element_text(angle = 0),
+    strip.text.x = element_text(size = 8),
+    legend.position = "none"
+  )
+```
+The only major difference i could find was the removal of distribution lines for some plots due the reduction in percentile range. And as none of my interpretations were based on the distribution line I will say all my previous interpretations stay unchanged.
+
+Question 5's Answer:
+```{r}
+survey_data <- survey_data %>%
+  mutate(across(everything(), ~ as.character(.))) %>%  # Convert factors to characters
+  mutate(across(everything(), ~ na_if(., ""))) %>%     # Replace empty strings with NA
+  mutate(across(everything(), ~ as.factor(.)))          # Convert back to factors if needed
+
+survey_data_clean <- survey_data |>
+  select(contains("resp_")) |>
+  pivot_longer(
+    cols = everything(),
+    names_to = "question", 
+    values_to = "response",
+  ) |>
+  mutate(question = str_remove(question, "resp_")) |>
+  drop_na(response)
+```
+
+```{r}
+unique(survey_data_clean$response)
+```
+
+
+```{r}
+survey_data_summary <- survey_data_clean %>% 
+  group_by(question, response) %>% 
+  count(name = "n_responses") %>% 
+  group_by(question) %>% 
+  mutate(percent_answers = n_responses / sum(n_responses)) %>% 
+  ungroup() %>% 
+  mutate(percent_answers_label = percent(percent_answers, accuracy = 1))
+survey_data_summary
+```
+
+```{r}
+survey_data_summary_diverging <- survey_data_summary %>%
+  mutate(percent_answers = if_else(response %in% c("3", "4", "5"), percent_answers, -percent_answers)) %>% 
+  mutate(percent_answers_label = percent(percent_answers, accuracy = 1))
+survey_data_summary_diverging
+```
+
+```{r}
+survey_data_summary_diverging_good_labels <- survey_data_summary_diverging %>%
+  mutate(percent_answers_label = abs(percent_answers)) %>% 
+  mutate(percent_answers_label = percent(percent_answers_label, accuracy = 1))
+survey_data_summary_diverging_good_labels
+```
+
+
+```{r}
+survey_data_summary_diverging_good_labels %>% 
+  ggplot(aes(x = question, 
+             y = percent_answers,
+             fill = response)) +
+  geom_col() +
+  geom_text(aes(label = percent_answers_label),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold") +
+  coord_flip() +
+  scale_x_discrete() +
+  scale_fill_viridis_d() +
+  labs(title = "Diverging Bar Chart of the Survey Questions",
+       x = NULL,
+       fill = NULL) +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        panel.grid = element_blank(),
+        legend.position = "top")
+```
+
+
+```{r}
+survey_data_summary_diverging_right_order <- survey_data_summary_diverging_good_labels  %>% 
+  mutate(response = fct_relevel(response,
+                               "2", "1", "3", "4", "5"),
+         response = fct_rev(response)) 
+survey_data_summary_diverging_right_order
+```
+
+
+```{r}
+survey_data_summary_diverging_right_order %>%
+  ggplot(aes(x = question, 
+             y = percent_answers,
+             fill = response)) +
+  geom_col() +
+  geom_text(
+    aes(label = percent_answers_label),
+    position = position_stack(vjust = 0.5),
+    color = "white",
+    fontface = "bold"
+  ) +
+  coord_flip() +
+  scale_x_discrete() +
+  scale_fill_viridis_d() +
+  labs(title = "Diverging Bar Chart of the Survey Questions",
+       x = NULL,
+       fill = NULL) +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        panel.grid = element_blank(),
+        legend.position = "top")
+```
+
+
+```{r}
+survey_data_summary_diverging_right_order %>%
+  ggplot(aes(x = question, 
+             y = percent_answers,
+             fill = response)) +
+  geom_col() +
+  geom_text(aes(label = percent_answers_label),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold") +
+  coord_flip() +
+  scale_x_discrete() +
+  scale_fill_viridis_d(breaks = c("1", "2", "3", "4", "5")) +
+  labs(title = "Diverging Bar Chart of the Survey Questions",
+       x = NULL,
+       fill = NULL) +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        panel.grid = element_blank(),
+        legend.position = "top")
+```
+
+```{r}
+survey_data_summary_diverging_right_order %>%
+  ggplot(aes(x = question, 
+             y = percent_answers,
+             fill = response)) +
+  geom_col() +
+  geom_text(aes(label = percent_answers_label),
+            position = position_stack(vjust = 0.5),
+            color = "white",
+            fontface = "bold") +
+  coord_flip() +
+  scale_x_discrete() +
+  scale_fill_manual(breaks = c("1", "2", "3", "4","5"),
+                    values = c(
+                      "1" = "darkorange3",
+                      "2" = "orange",
+                      "4" = "deepskyblue",
+                      "5" = "deepskyblue4",
+                      "3" = "#f7e0ad"
+                    )) +
+  labs(title = "Diverging Bar Chart of the Survey Questions",
+       x = NULL,
+       fill = NULL) +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        panel.grid = element_blank(),
+        legend.position = "top")
+```
+
+```{r}
+survey_data_summary |>
+ggplot(aes(x = question, y = percent_answers, fill = response)) +
+  geom_bar(stat="identity", position = position_fill(reverse = TRUE)) +
+  geom_text(aes(label = percent_answers_label), 
+            position = position_fill(vjust = 0.5, reverse = TRUE)) +
+  coord_flip() +
+  scale_x_discrete() +
+  # https://icolorpalette.com/download/palette/578493_color_palette.jpg
+  scale_fill_manual(breaks = c("1", "2", "3", "4","5"),
+                    values = c(
+                      "1" = "darkorange3",
+                      "2" = "orange",
+                      "3" = "#f7e0ad",
+                      "4" = "deepskyblue",
+                      "5" = "deepskyblue4"
+                    )) +
+  labs(title = "100% Bar Chart of the Survey Questions",
+       x = NULL,
+       fill = NULL) +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+        axis.title.x = element_blank(),
+        panel.grid = element_blank(),
+        legend.position = "top")
+```
+
+  The 100% Bar Chart is not very intuitive for this likert visualization. So I prefer using the Divergent Bar Chart instead for this likert visualization because I can have the freedom of selecting the "good" side of the responses like in this case I have chosen 3 and above(my good side) for one side and the rest(not good) for the other side.
+  
+References: 
+  https://rfortherestofus.com/2021/10/diverging-bar-chart
