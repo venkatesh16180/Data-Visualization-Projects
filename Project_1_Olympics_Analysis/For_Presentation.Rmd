@@ -1,0 +1,355 @@
+---
+title: "Presentation_Code"
+author: "Tallapaneni Venkateshwara Chowdary"
+date: "2024-10-12"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+#install.packages("ggtext")
+```
+
+```{r}
+olympics <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2024/2024-08-06/olympics.csv', show_col_types = FALSE)
+```
+
+```{r}
+head(olympics)
+```
+
+```{r}
+str(olympics)
+```
+
+```{r}
+Question_2_dat <- olympics %>% 
+  select(c(sex, year))
+```
+
+```{r}
+ggplot(Question_2_dat, aes(x=sex, fill=sex)) +  
+  geom_bar( ) +
+  scale_fill_manual(values = c("lightpink", "navyblue") ) +
+  theme(legend.position="none")
+```
+
+There are
+
+```{r}
+# THis is the first plot visualizing the Overall Gender Distribution
+ggplot(Question_2_dat, aes(x=sex, fill=sex)) +  
+  geom_bar() +
+  geom_text(aes(label = after_stat(count)), stat = "count", position = position_stack(vjust = 0.5)) +
+  scale_fill_manual(values = c("lightpink", "navy") ) +
+  theme(legend.position="none") + 
+  labs(
+    caption = "That's about 27.4% Female Olympians and 72.6% Male Olympians over all 120 years"
+  )
+```
+```{r}
+library(tidyverse)
+library(ggplot2)
+
+olympics <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2024/2024-08-06/olympics.csv', show_col_types = FALSE)
+```
+
+```{r}
+Question_2_dat <- olympics %>% 
+  select(c(sex, year))
+```
+
+```{r}
+# This is the code for the original plot
+ggplot(Question_2_dat, aes(x=sex, fill=sex)) +  
+  geom_bar() +
+  geom_text(aes(label = after_stat(count)), stat = "count", position = position_stack(vjust = 0.5)) +
+  scale_fill_manual(values = c("lightpink", "navy") ) +
+  theme(legend.position="none") + 
+  labs(
+    caption = "That's about 27.4% Female Olympians and 72.6% Male Olympians over all 120 years"
+  )
+```
+
+The feedback that was given for the above plot was "On slide 11, ink to plot ratio is too high. Main takeaway text is too small relative to plot size (-.25)". So the revised take away from the plot is going to be "The above plot gives the overall Olympian distribution by gender throughout all the games held from 1896 to 2016 together is as shown in the visualization. Also keep in mind the color scheme used for this visualization as moving forward this is how the gender is going to be differentiated, pink for females and blue for males". The following lollipop graph is replaced with the bar chart so as to address the high ink-plot ratio.
+
+```{r}
+# Reference: https://www.statology.org/lollipop-chart-r/
+
+#This is the code for the improved plot
+
+gender_summary <- Question_2_dat %>%
+  group_by(sex) %>%
+  summarise(count = n(), .groups = 'drop')  # Drop groups after summarizing
+
+# This is the lollipop plot visualizing the Overall Gender Distribution
+ggplot(gender_summary, aes(x = sex, y = count, color = sex)) +  
+  geom_segment(aes(x = sex, xend = sex, y = 0, yend = count), size = 1) +  # Line segments
+  geom_point(size = 20) +
+  geom_text(aes(label = count), color = 'white', size = 4, vjust = 0.5) +  # Count labels inside the points
+  scale_color_manual(values = c("lightpink", "navy")) +  # Custom colors
+  theme(legend.position = "none") + 
+  labs(
+    title = "Overall Gender Distribution of Olympians",
+    x = "Gender",
+    y = "Count",
+    caption = "That's about 27.4% Female Olympians and 72.6% Male Olympians over all 120 years"
+  )
+```
+
+That's about 27.4% Female Olympians and 72.6% Male Olympians.
+
+```{r}
+# This is the Third Plot where the Olympian counts are visualized using Stacked Area Chart
+ggplot(Question_2_dat, aes(x = year, fill = sex)) + 
+  geom_area(stat = "count", position = "stack") + 
+  scale_x_continuous(breaks = seq(1896, 2016, 10)) +
+  scale_fill_manual(values = c("lightpink", "navyblue") ) +
+  annotate("text", y = c(12500), x = c(1972), 
+           label = c("*") , color="black", 
+           size=3) +
+  annotate("text", y = c(12500), x = c(1992), 
+           label = c("*") , color="black", 
+           size=3) +
+  annotate("text", y = c(12500), x = c(2000), 
+           label = c("*") , color="black", 
+           size=3) +
+  annotate("rect", ymin=c(-Inf,-Inf,-Inf), ymax=c(Inf,Inf,Inf), xmin=c(1970,1990,1998) , xmax=c(1974,1993,2000), alpha=0.4, fill="grey")+
+  theme(legend.position = "right") +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 14, face = "bold")) +
+  labs(title = "Stacked Area Chart of Olympic Gender Distribution",
+       subtitle = "This Stacked Area Chart shows the Overall Olympian count for each year the Olympics was held",
+       alt = "Olympic Participation Barchart showing all the 120 years. On the x-axis we have the year and on y-axis we will have the count of the participants of that year with female counts stacked over the Male to get the overall count of that year",
+       caption = "The '*'s are the social changes that lead to the major changes in Olympics Participation")
+```
+
+```{r}
+ggplot(Question_2_dat, aes(x = year, y = after_stat(count), fill = sex)) + 
+  geom_bar(position = "dodge") + 
+  scale_x_continuous(breaks = seq(1896, 2016, 10)) +
+  scale_fill_manual(values = c("lightpink", "navyblue")) + 
+  annotate("text", y = c(12500), x = c(1972), 
+           label = c("*") , color="black", 
+           size=3) +
+  annotate("text", y = c(12500), x = c(1992), 
+           label = c("*") , color="black", 
+           size=3) +
+  annotate("text", y = c(12500), x = c(2000), 
+           label = c("*") , color="black", 
+           size=3) +
+  annotate("rect", ymin=c(-Inf,-Inf,-Inf), ymax=c(Inf,Inf,Inf), xmin=c(1970,1990,1998) , xmax=c(1974,1993,2000), alpha=0.4, fill="grey")+
+  theme(axis.text=element_text(size=12),
+        axis.title=element_text(size=14,face="bold"))
+        #text = element_text(size = 20,face = "bold"))
+  labs(title = "Olympic Gender Distribution",
+       subtitle = "It covers over a time period of 120 years",
+       alt = "Olympic Participation Barchart showing all the 120 years. On the x-axis we have the year and on y-axis we will  have the count of the participants of that year.")
+```
+
+```{r}
+ggplot(Question_2_dat, aes(x = year, fill = sex)) + 
+  geom_bar(position = "dodge") + 
+  scale_x_continuous(breaks = seq(1896, 2016, 10)) +
+  scale_fill_manual(values = c("lightpink", "navyblue")) + 
+  annotate("text", y = c(12500), x = c(1972), 
+           label = c("*") , color="black", 
+           size=3) +
+  annotate("text", y = c(12500), x = c(1992), 
+           label = c("*") , color="black", 
+           size=3) +
+  annotate("text", y = c(12500), x = c(2000), 
+           label = c("*") , color="black", 
+           size=3) +
+  annotate("rect", ymin=c(-Inf,-Inf,-Inf), ymax=c(Inf,Inf,Inf), xmin=c(1970,1990,1998) , xmax=c(1974,1993,2000), alpha=0.4, fill="grey")+
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 14, face = "bold")) +
+  labs(title = "Bar Plot of Olympic Gender Distribution",
+       subtitle = "This Bar Plot shows the Olympian count for each year the Olympics was held by Gender",
+       alt = "Olympic Participation Barchart showing all the 120 years. On the x-axis we have the year and on y-axis we will have the count of the participants of that year.",
+       caption = "The '*'s are the social changes that lead to the major changes in Olympics Participation")
+```
+```{r}
+library(tidyverse)
+library(ggplot2)
+
+olympics <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2024/2024-08-06/olympics.csv', show_col_types = FALSE)
+```
+
+```{r}
+Question_2_dat <- olympics %>% 
+  select(c(sex, year))
+```
+
+```{r}
+ggplot(Question_2_dat, aes(x = year, fill = sex)) + 
+  geom_bar(position = "dodge") + 
+  scale_x_continuous(breaks = seq(1896, 2016, 10)) +
+  scale_fill_manual(values = c("lightpink", "navyblue")) + 
+  annotate("text", y = c(12500), x = c(1972), 
+           label = c("*") , color="black", 
+           size=3) +
+  annotate("text", y = c(12500), x = c(1992), 
+           label = c("*") , color="black", 
+           size=3) +
+  annotate("text", y = c(12500), x = c(2000), 
+           label = c("*") , color="black", 
+           size=3) +
+  annotate("rect", ymin=c(-Inf,-Inf,-Inf), ymax=c(Inf,Inf,Inf), xmin=c(1970,1990,1998) , xmax=c(1974,1993,2001), alpha=0.4, fill="grey")+
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 14, face = "bold")) +
+  labs(title = "Bar Plot of Olympic Gender Distribution",
+       subtitle = "This Bar Plot shows the Olympian count for each year the Olympics was held by Gender",
+       alt = "Olympic Participation Barchart showing all the 120 years. On the x-axis we have the year and on y-axis we will have the count of the participants of that year.",
+       caption = "The '*'s are the social changes that lead to the major changes in Olympics Participation")
+```
+
+The feedback we got for this visualization was "On slide 12, y axis label is missing (-.25)". And to address that issue I am adding the y-axis label "Olympian Count". Also I feel like having the time periods of both the world wars under shaded area as well because those can be considered significant changes as well. With those 2 additional significant changes we have 5 significant social changes.
+
+```{r}
+ggplot(Question_2_dat, aes(x = year, fill = sex)) + 
+  geom_bar(position = "dodge") + 
+  scale_x_continuous(breaks = seq(1896, 2016, 10)) +
+  scale_fill_manual(values = c("lightpink", "navyblue")) + 
+  annotate("text", y = c(12500), x = c(1972), 
+           label = c("*") , color="black", 
+           size=3) +
+  annotate("text", y = c(12500), x = c(1992), 
+           label = c("*") , color="black", 
+           size=3) +
+  annotate("text", y = c(12500), x = c(2000), 
+           label = c("*") , color="black", 
+           size=3) +
+  annotate("text", y = c(12500), x = c(1916), 
+           label = c("*") , color="black", 
+           size=3) +
+  annotate("text", y = c(12500), x = c(1942), 
+           label = c("*") , color="black", 
+           size=3) +
+  annotate("rect", ymin=c(-Inf,-Inf,-Inf,-Inf,-Inf), ymax=c(Inf,Inf,Inf,Inf,Inf), xmin=c(1914, 1939,1970,1990,1998) , xmax=c(1918,1945,1974,1993,2001), alpha=0.4, fill="grey")+
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 14, face = "bold")) +
+  labs(title = "Bar Plot of Olympic Gender Distribution",
+       subtitle = "This Bar Plot shows the Olympian count for each year the Olympics was held by Gender",
+       y = "Olympian Count",
+       alt = "Olympic Participation Barchart showing all the 120 years. On the x-axis we have the year and on y-axis we will have the count of the participants of that year.",
+       caption = "The '*'s are the social changes that lead to the major changes in Olympics Participation")
+```
+
+```{r}
+ggplot(Question_2_dat, aes(x = year, y = after_stat(count), fill = sex)) + 
+  geom_bar(position = "dodge") + 
+  #scale_x_continuous(breaks = unique(Question_2_dat$year)) + 
+  scale_fill_manual(values = c("violet", "navy")) + 
+  facet_grid(. ~ season) +
+  annotate("text", y = c(10000), x = c(1942), 
+           label = c("WW2") , color="black", 
+           size=5) +
+  annotate("text", y = c(10000), x = c(1916), 
+           label = c("WW1") , color="black", 
+           size=5) +
+  annotate("text", y = c(10000), x = c(1972), 
+           label = c("IOC") , color="black", 
+           size=5) +
+  annotate("text", y = c(10000), x = c(1992), 
+           label = c("Soviet Dissolution") , color="black", 
+           size=5) +
+  annotate("rect", ymin=c(-Inf,-Inf,-Inf,-Inf), ymax=c(Inf,Inf,Inf,Inf), xmin=c(1912,1939,1970,1990) , xmax=c(1918,1945,1974,1993), alpha=0.4, fill="grey")+
+  theme_minimal() +
+  theme(axis.text=element_text(size=15),
+        axis.title=element_text(size=15,face="bold"),
+        text = element_text(size = 20,face = "bold"))
+```
+
+```{r}
+Female_dat <- Question_2_dat %>%
+  filter(sex %in% "F")
+```
+
+```{r}
+Athletes_historical_gender <- olympics %>% group_by(year, sex,season) %>% 
+  summarise(n = length(unique(id)))
+```
+
+```{r}
+ggplot(Athletes_historical_gender, aes(x = year , y = n, color = sex)) + 
+  geom_line() +
+  facet_grid(. ~ season) +
+  scale_x_continuous(n.breaks = 8)
+```
+
+```{r}
+latest_data <- Question_2_dat %>% 
+  filter(year >= 1987 & year <= 1993)
+```
+
+```{r}
+ggplot(latest_data, aes(y = year, fill = sex)) + 
+  geom_area(stat = "count", position = "stack") + 
+  scale_y_continuous(breaks = unique(latest_data$year)) + 
+  scale_fill_manual(values = c("pink", "blue") ) +
+  facet_grid(. ~ season) +
+  theme(legend.position = "right")
+```
+
+```{r}
+
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+```

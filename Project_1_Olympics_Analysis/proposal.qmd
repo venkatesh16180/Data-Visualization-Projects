@@ -1,0 +1,161 @@
+---
+title: "Info 526- Project 1 Olympics Data Analysis"
+subtitle: "Proposal"
+author: 
+  - name: "INFO Crew"
+    affiliations:
+      - name: "College of Information Science, University of Arizona"
+description: "Olympic Athlete Data Analysis"
+format:
+  html:
+    code-tools: true
+    code-overflow: wrap
+    code-line-numbers: true
+    embed-resources: true
+editor: visual
+code-annotations: hover
+execute:
+  warning: false
+---
+
+## Dataset
+
+```{r}
+olympics <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2024/2024-08-06/olympics.csv', show_col_types = FALSE)
+```
+
+```{r}
+head(olympics)
+```
+
+```{r}
+# Count the number of missing values in the medal column
+sum(is.na(olympics$medal))
+
+```
+
+That means out of the 271116 appearances, 231333 of the times the Olympian had to return back to their home country without a medal. The reason for mentioning appearances instead of Olympians is because an Olympian may have made multiple appearances in Olympics. that's a success rate of 14.67%.
+
+```{r}
+# Check structure of the dataset to identify numeric columns
+str(olympics)
+
+```
+
+As you can see the dataset has information of an Olympian. Information such as -
+
+1.  **ID** - Unique number for each Olympian
+
+2.  **Name** - Olympian's name
+
+3.  **Sex** - Olympian's Gender (M or F)
+
+4.  **Age** - Olympian's Age (Integer)
+
+5.  **Height** - Olympian's Height (In centimeters)
+
+6.  **Weight** - Olympian's Weight (In kilograms)
+
+7.  **Team** - Team name
+
+8.  **NOC** - National Olympic Committee 3-letter code
+
+9.  **Games** - Year and season
+
+10. **Year** - Year of Olympics (Integer)
+
+11. **Season** - Summer or Winter
+
+12. **City** - Host city
+
+13. **Sport** - Sport
+
+14. **Event** - Event
+
+15. **Medal** - Gold, Silver, Bronze, or NA
+
+```{r}
+# Install dplyr if it's not installed
+# install.packages("dplyr")
+# install.packages("pacman")
+# install.packages("kableExtra")
+# Load dplyr
+library(dplyr)
+
+```
+
+### Olympic Medal data description
+
+This dataset is a historical compilation of Olympic athletes' data, which has the information from "Athens 1896" to "Rio 2016". It contains demographic information about athletes, including their age, sex, height, weight, as well as their team, event, and any medals they may have won. The data set is well-suited for an exploratory analysis to uncover trends in athlete performance over time.
+
+### **Provenance**
+
+This dataset is originally from "www.sports-reference.com", a website which was the result of a group of history enthusiasts and self proclaimed statistorians' hardwork. For this analysis however we are using the dataset from #TidyTuesday project, which provides clean datasets for public use and analysis which inturn was collected from kaggle. The dataset collected in Kaggle was the effort of "RGriffin" webscraping "www.sports-reference.com" in May 2018.
+
+## **The Dimensions of Olympic data is \[271116,15\]**
+
+```{r}
+dim(olympics)
+```
+
+#### Reason for Choosing this Data set
+
+This data set was chosen because of the following reasons:
+
+1.  **Rich Historical Data**: The data set spans multiple Olympic events and years, making it suitable for longitudinal analysis of trends in athletic performance.
+
+2.  **Diverse Insights**: It allows exploration of various aspects such as demographics (age, height, weight), gender representation, and country performance in terms of medals.
+
+3.  **Potential for Visualizations**: The data set offers ample opportunities for interesting visualizations, such as medal distributions, age and gender analysis, and country-wise comparisons.
+
+4.  **Public Interest**: The Olympics are a globally recognized event, and analyzing this data can yield insights that have broad appeal and significance.
+
+## Questions
+
+Q1. **Country-wise Medal Distribution :** Visualize Medal distribution of top 15 countries with most medals along with their respective Bronze, Silver and Gold medal counts.
+
+Q2. **Gender-wise Distribution of Olympians over Times :** Visualize Olympians count by gender over time.
+
+## Analysis plan
+
+-   Question 1: **Country-wise Medal Distribution**
+    -   Variables: Country, Medals, Medal type
+    -   Plan: We will calculate the medals count for each medal type i.e. bronze, silver, gold of top 15 countries and will plot the stacked bar graph to show the medal distribution.
+    -   Plot type: Stacked bar graph
+
+-   Question 2: **Gender-wise Distribution of Olympians over Times**
+    -   Variables: Gender, Participant_count(computing the each gender's count for that year using "count"), Year
+    -   Plan: We will calculate the count of people participated gender wise in each year and will plot the Stacked area chart.
+    -   Plot type: Grouped Multiset Bar Charts, Stacked area chart
+
+## Plan of Action(Live)
+
++----------------------------------------------------+--------------------------------------------------------------------------+--------------------------------------------------------------------------+---------------+--------------+-------------------------------------------------------------+
+| **Task**                                           | Status                                                                   | Assignee                                                                 | **Due dates** | **Priority** | Summary                                                     |
+|                                                    |                                                                          |                                                                          |               |              |                                                             |
+|                                                    | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |               |              |                                                             |
+|                                                    |                                                                          |                                                                          |               |              |                                                             |
+|                                                    | Done - D                                                                 | Nikhil - 1                                                               |               |              |                                                             |
+|                                                    |                                                                          |                                                                          |               |              |                                                             |
+|                                                    | In Progress - I                                                          | Aastha - 2                                                               |               |              |                                                             |
+|                                                    |                                                                          |                                                                          |               |              |                                                             |
+|                                                    | To Do - T                                                                | Venkatesh - 3                                                            |               |              |                                                             |
+|                                                    |                                                                          |                                                                          |               |              |                                                             |
+|                                                    |                                                                          | Trayvion - 4                                                             |               |              |                                                             |
++====================================================+==========================================================================+==========================================================================+===============+==============+=============================================================+
+| Create Proposal                                    | D                                                                        | 1,2,3                                                                    | Sept 18       | High         | Select data and analyze it and create proposal              |
++----------------------------------------------------+--------------------------------------------------------------------------+--------------------------------------------------------------------------+---------------+--------------+-------------------------------------------------------------+
+| Update proposal                                    | D                                                                        | 1,2,3                                                                    | Sept 25       | High         | Update proposal according to the feedbacks from peer review |
++----------------------------------------------------+--------------------------------------------------------------------------+--------------------------------------------------------------------------+---------------+--------------+-------------------------------------------------------------+
+| Write-up: Introduction & basic structure           | I                                                                        | 1                                                                        | Sept 30       | Medium       | Update index.qmd to add Introduction and other details.     |
++----------------------------------------------------+--------------------------------------------------------------------------+--------------------------------------------------------------------------+---------------+--------------+-------------------------------------------------------------+
+| Write-up: Load data & Data preparation             | I                                                                        | 1,2,3,4                                                                  | Oct 6         | High         | Clean and manipulate the data to get required matrices      |
++----------------------------------------------------+--------------------------------------------------------------------------+--------------------------------------------------------------------------+---------------+--------------+-------------------------------------------------------------+
+| Question1: Analysis, Visualization and Discussion  | I                                                                        | 1,2                                                                      | Oct 8         | High         | Generate the plot for question 1                            |
++----------------------------------------------------+--------------------------------------------------------------------------+--------------------------------------------------------------------------+---------------+--------------+-------------------------------------------------------------+
+| Question 2: Analysis, Visualization and Discussion | I                                                                        | 3                                                                        | Oct 9         | High         | Generate the plots for question 2                           |
++----------------------------------------------------+--------------------------------------------------------------------------+--------------------------------------------------------------------------+---------------+--------------+-------------------------------------------------------------+
+| Work on Presentation                               | I                                                                        | 3,4                                                                      | Oct 14        | High         | Add all details needed in Presentation.                     |
++----------------------------------------------------+--------------------------------------------------------------------------+--------------------------------------------------------------------------+---------------+--------------+-------------------------------------------------------------+
+| Final Internal Review and modifications            | T                                                                        | 1,2,3,4                                                                  | Oct 14        | High         | Review of all steps and include suggestions.                |
++----------------------------------------------------+--------------------------------------------------------------------------+--------------------------------------------------------------------------+---------------+--------------+-------------------------------------------------------------+

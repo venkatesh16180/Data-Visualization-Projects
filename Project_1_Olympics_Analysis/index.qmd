@@ -1,0 +1,22 @@
+---
+title: "Project Title"
+subtitle: "INFO 526 - Fall 2024 - Project 01"
+author: 
+  - name: "Team name"
+    affiliations:
+      - name: "School of Information, University of Arizona"
+description: "This Project deals with answering questions related to medal and gender using a Olympian dataset."
+format:
+   html:
+    code-tools: true
+    code-overflow: wrap
+    embed-resources: true
+editor: visual
+execute:
+  warning: false
+  echo: false
+---
+
+## Abstract
+
+In this Project we plan on answering two very different questions one based on medals and country while the other is to find out the decade or time as to when there is increase in Female Olympians. These questions are answered using visualizations drawn using ggplot2, a R Programming package.
