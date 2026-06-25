@@ -1,0 +1,531 @@
+---
+title: "Homework4"
+author: "Hemant"
+date: "2024-11-27"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+
+# Question 4
+
+
+```{r}
+library(sf)
+library(ggplot2)
+library(ggrepel)
+
+```
+
+```{r}
+# Define the folder path
+folder_path <- "C:/Users/91734/Desktop/data_viz/Homework4/HW4_data"
+```
+
+
+```{r}
+# Read the shapefile
+tribal_regions <- st_read(paste0(folder_path, "/American_Indian_Reservations_in_Arizona.shp"))
+```
+
+
+```{r}
+# View the structure and summary
+print(tribal_regions)
+summary(tribal_regions)
+
+```
+
+
+```{r}
+# Question 2
+
+#Arizona state of counties. Reproduce the figure below.
+
+# Load required libraries
+library(tigris)
+library(ggplot2)
+library(sf)
+library(dplyr)
+
+# Ensure shapefiles are downloaded only once
+options(tigris_use_cache = TRUE)
+
+# Download the shapefile for Arizona counties (2021)
+arizona_counties <- counties(state = "AZ", year = 2021, progress_bar = FALSE)
+
+# Prepare the county names and geometry for plotting
+arizona_counties <- arizona_counties %>%
+  mutate(NAME = gsub(" County", "", NAME))
+
+# Convert shapefile to sf object for ggplot2 compatibility
+arizona_counties_sf <- st_as_sf(arizona_counties)
+
+# Extract centroid coordinates for labels
+centroids <- arizona_counties_sf %>%
+  st_centroid() %>%
+  st_coordinates() %>%
+  as.data.frame()
+
+# Add coordinates back to the data
+arizona_counties_sf <- arizona_counties_sf %>%
+  mutate(longitude = centroids$X, latitude = centroids$Y)
+
+# Plot the counties with labels
+ggplot(data = arizona_counties_sf) +
+  geom_sf(fill = "lightgrey", color = "black") +  # County boundaries
+  geom_label(
+    aes(x = longitude, y = latitude, label = NAME),
+    size = 3,  # Adjust text size
+    label.size = 0.2,  # Border thickness of the text box
+    label.padding = unit(0.15, "lines"),  # Padding within text box
+    label.r = unit(0.2, "lines")  # Rounded corners
+  ) +
+  labs(
+    title = "Counties in Arizona State",
+    x = "Longitude",
+    y = "Latitude",
+    caption = "Source: Shapefile obtained using {tigris} R package, v2.0.1"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(hjust = 0.5),  # Center the title
+    plot.caption = element_text(hjust = 0)  # Left-align the caption
+  )
+```
+
+
+```{r}
+# Question 3
+
+#Arizona state of population change. Reproduce the figure below.
+
+# Load necessary libraries
+library(readxl)
+library(tigris)
+library(ggplot2)
+library(sf)
+library(dplyr)
+library(RColorBrewer)
+library(scales)
+
+# Cache the shapefile to avoid re-downloading
+options(tigris_use_cache = TRUE)
+
+# Download the shapefile for Arizona counties
+arizona_counties <- counties(state = "AZ", year = 2021, progress_bar = FALSE)
+
+# Clean county names: remove " County" from the names
+arizona_counties <- arizona_counties %>%
+  mutate(NAME = gsub(" County", "", NAME))
+
+# Define the file path to the Excel file
+file_path <- "C:/Users/91734/Desktop/data_viz/Homework4/HW4_data/co-est2023-pop-04.xlsx"
+
+
+# Read the Excel file, skipping the first 4 rows to get to the data
+population_data_raw <- read_excel(
+  path = file_path,
+  sheet = 1,  # Adjust if your data is on a different sheet
+  skip = 4,   # Skip metadata rows at the top
+  col_names = FALSE # No headers in the data
+)
+
+# Inspect the data structure to identify columns
+head(population_data_raw)
+
+# Clean and select relevant columns
+population_data <- population_data_raw %>%
+  # Filter rows where the first column starts with a dot (indicating valid counties)
+  filter(grepl("^\\.", `...1`)) %>%
+  # Select columns: County names and Population Change (adjust columns as necessary)
+  select(
+    County = `...1`,               # County names
+    total_pop_change = `...6`      # Population change column (adjust if needed)
+  ) %>%
+  # Remove leading dots and trailing text like " County, Arizona"
+  mutate(
+    County = gsub("^\\.| County, Arizona$", "", County)
+  )
+
+# Check the cleaned data
+print(population_data)
+
+# Merge shapefile with population data
+arizona_counties_merged <- arizona_counties %>%
+  left_join(population_data, by = c("NAME" = "County"))
+
+# Identify counties that did not match (optional, for debugging)
+unmatched <- arizona_counties_merged %>%
+  filter(is.na(total_pop_change)) %>%
+  pull(NAME)
+
+if (length(unmatched) > 0) {
+  warning("The following counties have missing data: ", paste(unmatched, collapse = ", "))
+}
+
+# Ensure the data is an sf object for plotting
+arizona_counties_sf <- st_as_sf(arizona_counties_merged)
+
+# Plot the map with ggplot2
+ggplot(data = arizona_counties_sf) +
+  geom_sf(aes(fill = total_pop_change), color = "white", size = 0.3) +  # Add boundaries and fill
+  scale_fill_gradientn(
+    colors = rev(brewer.pal(11, "RdBu")),   # Use the RdBu palette
+    name = "Population Change",            # Legend title
+    labels = comma,                        # Format numbers with commas
+    na.value = "grey80"                    # Handle missing values with grey
+  ) +
+  labs(
+    title = "Resident Population Change for Counties in AZ",
+    subtitle = "July 01, 2020 to July 01, 2023",
+    caption = "Source: Shapefile obtained using {tigris} R package, v2.0.1\nPopulation change data from the US Census Bureau",
+    x = "Longitude",
+    y = "Latitude"
+  ) +
+  theme_minimal(base_size = 14) +          # Clean theme
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 16),
+    plot.subtitle = element_text(hjust = 0.5, size = 12),
+    legend.position = "right"
+  )
+
+
+
+```
+
+
+```{r}
+population_preview <- read_excel("C:/Users/91734/Desktop/data_viz/Homework4/HW4_data/co-est2023-pop-04.xlsx")
+head(population_preview)
+```
+
+
+
+
+
+# Question 4
+
+
+```{r}
+# Load necessary libraries
+library(sf)
+library(tidyverse)
+library(ggplot2)
+library(ggrepel)
+
+# Read the shapefiles
+tribal_regions <- st_read("American_Indian_Reservations_in_Arizona.shp")
+
+# Standardize CRS to ensure alignment
+st_crs(tribal_regions) <- st_crs(arizona_counties)
+
+# Create a new sf object for tribal region boundaries with thicker lines
+tribal_boundaries <- st_union(tribal_regions) %>%
+  st_cast("MULTILINESTRING")
+
+```
+
+
+```{r}
+# # Filter for specific tribes (e.g., Hopi Tribe and Navajo Nation)
+# filtered_tribes <- tribal_regions %>%
+#   filter(grepl("Tohono O’odham Nation", tolower(NAME), ignore.case = TRUE))  # Using grepl for case-insensitive matching
+# filtered_tribes$NAME
+
+# Filter for specific tribes (e.g., Hopi Tribe and Navajo Nation)
+filtered_tribes <- tribal_regions %>%
+  filter(NAME %in% c("Hopi Tribe", 
+                     "Navajo Nation", 
+                     "White Mountain Apache Tribe",
+                     "San Carlos Apache Tribe",
+                     "Tohono O’odham Nation"))
+
+# Filter the data for the specific tribes
+hopi_tribe <- tribal_regions %>% filter(NAME == "Hopi Tribe")
+navajo_nation <- tribal_regions %>% filter(NAME == "Navajo Nation")
+white_mountain_apache <- tribal_regions %>% filter(NAME == "White Mountain Apache Tribe")
+san_carlos_apache <- tribal_regions %>% filter(NAME == "San Carlos Apache Tribe")
+
+
+
+ggplot() +
+  geom_sf(data = arizona_counties, color = "white") +
+  theme_minimal() +
+  geom_sf(data = tribal_boundaries, fill = "gray", color = "black", size = 1) +
+  # Add layer for Hopi Tribe with a distinct color (e.g., red)
+  geom_sf(data = hopi_tribe, fill = "gray", color = "black", size = 1, alpha = 0.3) +
+  
+  # Add layer for Navajo Nation with a distinct color (e.g., blue)
+  geom_sf(data = navajo_nation, fill = "gray", color = "black", size = 1, alpha = 0.3) +
+  
+  # Add layer for White Mountain Apache Tribe with a distinct color (e.g., green)
+  geom_sf(data = white_mountain_apache, fill = "gray", color = "black", size = 1, alpha = 0.3) +
+  
+  # Add layer for San Carlos Apache Tribe with a distinct color (e.g., purple)
+  geom_sf(data = san_carlos_apache, fill = "gray", color = "black", size = 1, alpha = 0.3) +
+
+  geom_label_repel(data = filtered_tribes,   # Add labels with arrows
+                   aes(label = NAME, geometry = geometry),
+                   stat = "sf_coordinates",  # Use centroids for label positioning
+                   size = 3, fontface = "bold",
+                   fill = "white", color = "black", # White label box, black text
+                   label.padding = unit(0.2, "lines"),  # Padding inside the label box
+                   label.size = 0.3,                  # Border size of the label box
+                   arrow = arrow(length = unit(0.02, "npc")),  # Add arrows
+                   force = 10,                        # Adjust label repulsion force
+                   max.overlaps = Inf                 # Allow max separation
+  ) +
+  # Or, if geom_text_repel doesn't work, try manual label placement with geom_text
+  # geom_text(data = tribal_regions, aes(label = NAME, geometry = geometry),
+  #           size = 3, nudge_x = 30000, nudge_y = 30000) +
+  labs(
+    title = "Indigenous Tribal Boundaries in AZ",
+    x = "Longitude",
+    y = "Latitude",
+    caption = "Source : Shapefile obtained using {tigris} R package, v2.0.1 \nIndigenous TribeShapefile obtained from AZGeo Data") +
+  theme_minimal() +
+  theme(axis.text = element_text(size = 10),  # Show axis text (adjust size)
+        axis.ticks = element_line(),  # Show axis ticks
+        plot.title = element_text(size = 14, hjust = 0.5),
+        plot.caption = element_text(size = 10, hjust = 1)
+        )
+```
+
+
+```{r}
+library(readxl)
+library(dplyr)
+
+# Specify the path to the Excel file
+file_path <- "co-est2023-pop-04.xlsx"
+
+# Read the Excel file and skip the first two rows (header and description)
+pop_data <- read_excel(file_path, skip = 4, n_max = 15)
+
+# Change the column names
+colnames(pop_data) <- c("Arizona County", "April 1st 2020", "2020", "2021", "2022", "2023")
+
+pop_data <- pop_data %>%
+  mutate('Arizona County' = gsub(" County, Arizona", "", `Arizona County`)) # Remove "County" from population data 
+
+# View the data to ensure it is read correctly
+pop_data
+```
+
+
+
+
+```{r}
+library(dplyr)
+library(stringr)
+
+# Clean the county names in pop_data to match arizona_counties
+pop_data$`Arizona County` <- str_remove(pop_data$`Arizona County`, "^\\.")  # Remove leading period
+pop_data$`Arizona County` <- str_remove(pop_data$`Arizona County`, " County, Arizona$")  # Remove 'County, Arizona'
+
+# Ensure consistent case formatting (both to title case)
+pop_data$`Arizona County` <- str_to_title(pop_data$`Arizona County`)
+
+# Perform the merge
+merged_data <- left_join(arizona_counties, pop_data, by = c("NAME" = "Arizona County"))
+
+# View the merged data
+head(merged_data)
+```
+
+```{r}
+library(dplyr)
+library(stringr)
+
+# Clean the county names in pop_data to match arizona_counties
+pop_data$`Arizona County` <- str_remove(pop_data$`Arizona County`, "^\\.")  # Remove leading period
+pop_data$`Arizona County` <- str_remove(pop_data$`Arizona County`, " County, Arizona$")  # Remove 'County, Arizona'
+
+# Ensure consistent case formatting (both to title case)
+pop_data$`Arizona County` <- str_to_title(pop_data$`Arizona County`)
+
+# Perform the merge
+merged_data <- left_join(arizona_counties, pop_data, by = c("NAME" = "Arizona County"))
+
+# View the merged data
+head(merged_data)
+```
+```{r}
+# Calculate the total population change from 2021 to 2022
+merged_data_diff <- merged_data %>%
+  mutate(total_pop_change_21_22 = `2023` - `2020`)
+```
+
+
+
+```{r}
+library(patchwork)
+
+# Filter for specific tribes (e.g., Hopi Tribe and Navajo Nation)
+filtered_az_counties <- arizona_counties %>%
+  filter(NAME %in% c("Maricopa", "Pinal", "Pima"))
+
+
+# Plot the map using a diverging RdBu color palette
+base_map <- ggplot(data = merged_data_diff) +
+  geom_sf(aes(fill = total_pop_change_21_22), color = "white") +  # Color counties based on population change
+  scale_fill_gradient2(low = "#08609e", mid = "white", high = "brown", 
+                       midpoint = 70000, name = "Population Change") +  # Diverging color scale
+  theme_minimal() +
+  geom_label_repel(data = filtered_az_counties,   # Add labels with arrows
+                   aes(label = NAME, geometry = geometry),
+                   stat = "sf_coordinates",  # Use centroids for label positioning
+                   size = 3, fontface = "bold",
+                   fill = "white", color = "black", # White label box, black text
+                   label.padding = unit(0.2, "lines"),  # Padding inside the label box
+                   label.size = 0.3,                  # Border size of the label box
+                   arrow = arrow(length = unit(0.02, "npc")),  # Add arrows
+                   force = 10,                        # Adjust label repulsion force
+                   max.overlaps = Inf                 # Allow max separation
+  ) +
+  labs(title = "Resident Population Change for Counties in AZ",
+       subtitle = "July 01, 2020 to July 01, 2023",
+       x = "Longitude",
+       y = "Latitude",
+       caption = "Source: Shapefile obtained using {tigris} R package, v2.0.1 \npopulation change data from the US Census Bureau \nIndigenous Tribe Shapefile btained from AZGeo Data") +
+  theme(axis.text = element_text(size = 10),  # Show axis text (adjust size)
+        axis.ticks = element_line(),  # Show axis ticks
+        plot.title = element_text(size = 14, hjust = 0.5),
+        plot.caption = element_text(size = 10, hjust = 1),
+        legend.position.inside = c(0.25, 0.9),
+       # Move legend to the top-left corner
+        legend.direction = "horizontal",     # Set legend items horizontally
+        legend.background = element_rect(fill = NA, color = NA),  # Optional: background
+        legend.title = element_text(size = 10),  # Style the legend title
+        legend.text = element_text(size = 8),  # Style the legend text
+        # legend.title.align = 0.5,  # Center the legend title
+        legend.title.position = "top",
+        legend.position = "top",
+        legend.spacing.y = unit(0.3, "cm"),  # Increase space between the title and the legend keys
+        legend.key.size = unit(0.7, "cm"),    # Control overall size of legend key
+        legend.key.width = unit(0.95, "cm"),     # Increase the width of the legend key
+        legend.key.height = unit(0.4, "cm")   # Decrease the height of the legend key
+        ) +
+  coord_sf(xlim = c(-122, -109), ylim = c(29, 37))  # Adjust x-axis and y-axis range
+
+
+```
+
+
+
+```{r}
+# Filter for specific tribes (e.g., Hopi Tribe and Navajo Nation)
+filtered_tribes_sub <- tribal_regions %>%
+  filter(NAME %in% c("White Mountain Apache Tribe",
+                     "San Carlos Apache Tribe",
+                     "Tohono O’odham Nation"))
+
+# Plot the map using a diverging RdBu color palette
+inset_map <- ggplot(data = merged_data_diff) +
+  geom_sf(aes(fill = total_pop_change_21_22), color = "white") +  # Color counties based on population change
+  scale_fill_gradient2(low = "#08609e", mid = "white", high = "brown", guide = "none",
+                       midpoint = 70000, name = "Population Change") +  # Diverging color scale
+  geom_sf(data = tribal_boundaries, fill = "gray", color = "black", size = 1) +
+  # Add layer for Hopi Tribe with a distinct color (e.g., red)
+  geom_sf(data = hopi_tribe, fill = "gray", color = "black", size = 1, alpha = 0.3) +
+  
+  # Add layer for Navajo Nation with a distinct color (e.g., blue)
+  geom_sf(data = navajo_nation, fill = "gray", color = "black", size = 1, alpha = 0.3) +
+  
+  # Add layer for White Mountain Apache Tribe with a distinct color (e.g., green)
+  geom_sf(data = white_mountain_apache, fill = "gray", color = "black", size = 1, alpha = 0.3) +
+  
+  # Add layer for San Carlos Apache Tribe with a distinct color (e.g., purple)
+  geom_sf(data = san_carlos_apache, fill = "gray", color = "black", size = 1, alpha = 0.3) +
+  
+  # labs(title = "Resident Population Change for Counties in AZ",
+  #      subtitle = "July 01, 2020 to July 01, 2023",
+  #      x = "Longitude",
+  #      y = "Latitude",
+  #      caption = "Source: Shapefile obtained using {tigris} R package, v2.0.1 \npopulation change data from the US Census Bureau") +
+  # theme(axis.text = element_text(size = 10),  # Show axis text (adjust size)
+  #       axis.ticks = element_line(),  # Show axis ticks
+  #       plot.title = element_text(size = 14, hjust = 0.5),
+  #       plot.caption = element_text(size = 10, hjust = 0.5)
+  #       ) +
+  coord_sf(xlim = c(-113, -110.5), ylim = c(31.5, 34)) + # Adjust coordinates as needed
+  # theme(plot.margin = unit(c(1, 3, 0.5, 0.5), "cm")) + # Add space around the plot for the background
+  geom_label_repel(data = filtered_tribes_sub,   # Add labels with arrows
+                   aes(label = NAME, geometry = geometry),
+                   stat = "sf_coordinates",  # Use centroids for label positioning
+                   size = 1.8, fontface = "bold",
+                   fill = "white", color = "black", # White label box, black text
+                   label.padding = unit(0.2, "lines"),  # Padding inside the label box
+                   label.size = 0.3,                  # Border size of the label box
+                   arrow = arrow(length = unit(0.02, "npc")),  # Add arrows
+                   force = 10,                        # Adjust label repulsion force
+                   max.overlaps = Inf                 # Allow max separation
+  )+
+  theme_minimal() +
+  theme(
+    axis.title = element_blank(),  # Remove axis titles
+    axis.text = element_blank(),  # Remove axis text
+    axis.ticks = element_blank(),  # Remove axis ticks
+    plot.background = element_rect(fill = NA, color = NA),  # Set background color for the entire plot
+    panel.background = element_rect(fill = NA, color = NA)  # Set background color for the panel (map area)
+  )
+  
+
+```
+
+
+
+```{r}
+library(ggplot2)
+
+# Assuming you have the base_map and inset_map already defined.
+
+# Create the base_map with additional lines
+base_map_with_lines <- base_map +
+  # Example dotted line from a point in base map to inset (adjust coordinates as needed)
+  geom_segment(aes(x = -113, y = 32, xend = -118, yend = 32), linetype = "dotted", size = 0.7, color = "black") +
+  geom_segment(aes(x = -113, y = 32, xend = -118, yend = 30), linetype = "dotted", size = 0.7, color = "black") +
+  theme(plot.margin = unit(c(0, 0, 0, 0), "cm"))  # Remove margins
+
+compressed_inset <- inset_map +
+  theme(plot.margin = unit(c(0.3,0.3,0.1,0.1), "cm"))  # Remove margins
+
+# Combine with scaled inset
+combined_plot <- base_map_with_lines +
+  inset_element(
+    compressed_inset,
+    left = -0.2,
+    bottom = 0,
+    right = .6,
+    top = .5
+  )
+
+# Display the combined plot with dotted lines
+combined_plot
+```
+
