@@ -1,0 +1,156 @@
+---
+title: "HW5"
+author: "Tallapaneni Venkateshwara Chowdary"
+date: "2024-12-09"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+Question 1:
+```{r}
+# The website mentioned in the HW5 got taken down at the time of me working on the Homework. Although I was able to get a vague image of the visualization in this search[1] - the 3rd image. I was not fully able to view the image in detail for recreation. So Instead I am assuming it looks the same as 2nd one so i am recreating that.
+```
+
+
+References:
+  [1] https://www.google.com/search?sca_esv=82e125c7d904eb9e&rlz=1C1GCGQ_enUS1125US1125&q=lyme+disease+2018+top+15+states&udm=2&fbs=AEQNm0Aa4sjWe7Rqy32pFwRj0UkWd8nbOJfsBGGB5IQQO6L3JzWreY9LW7LdGrLDAFqYDH2Z7s7jqgHIAW8PVnwe_sR_e-RCOLF8PNV6cgrvTe9W1QlY3sOMCnrD6DpPmucUF3Q4DWCnbUQ16OCFEw0bA3f-zorCYPCwItkuWVcknbOv4-nN1bzai1VYTk7zJThGO9aVJKR1TUIesAdeoQ7gAi3QfFsX3Q&sa=X&ved=2ahUKEwjS6_6CyZuKAxU0EDQIHetSDocQtKgLegQIFhAB&biw=1920&bih=945&dpr=1
+
+
+```{r}
+library(tibble)
+library(dplyr)
+library(plotly)
+
+# Create the data frame with state codes
+lyme_data <- tribble(
+  ~State, ~State_Code, ~Cases,
+  "New York", "NY",  1000,
+  "Pennsylvania", "PA",  900,
+  "New Jersey", "NJ",  800,
+  "Connecticut", "CT",  700,
+  "Massachusetts", "MA",  600,
+  "Maryland", "MD",  500,
+  "Virginia", "VA",  400,
+  "Wisconsin", "WI",  300,
+  "Minnesota", "MN",  200,
+  "West Virginia", "WV",  100,
+  "Rhode Island", "RI",  90,
+  "Delaware", "DE",  80,
+  "New Hampshire", "NH",  70,
+  "Vermont", "VT",  60,
+  "Maine", "ME",  50
+)
+
+# Calculate percentages
+lyme_data <- lyme_data %>%
+  mutate(Percentage = Cases / sum(Cases) * 100)
+
+# Sort data for pie chart and calculate cumulative percentage
+lyme_data <- lyme_data %>%
+  arrange(desc(Cases)) %>%
+  mutate(Cumulative_Percentage = 100 - cumsum(Percentage))
+
+# Reorder the State factor based on Cumulative_Percentage
+lyme_data$State <- factor(lyme_data$State, levels = lyme_data$State[order(lyme_data$Cumulative_Percentage)])
+
+# Create a new label for cumulative percentage
+lyme_data$Label <- paste(lyme_data$State_Code, "<br>", round(lyme_data$Cumulative_Percentage, 1), "%")
+
+# Create the pie chart using plotly
+plotly_pie_chart <- plot_ly(lyme_data, 
+                             labels = ~State, 
+                             values = ~Percentage, 
+                             type = 'pie', 
+                             textinfo = 'text',  # Use 'text' to show custom labels
+                             hoverinfo = 'text',
+                             text = ~Label,  # Use the new Label column for text
+                             title = "Lyme Disease Incidence in a Year Per 100,000 Population in Top 15 States") %>%
+  layout(showlegend = TRUE)
+
+# Print the interactive plot
+plotly_pie_chart
+```
+
+
+```{r}
+ggplot(lyme_data, aes(x = reorder(State, -Cases), y = Cases)) +
+  geom_bar(stat = "identity", aes(fill = State)) +
+  scale_fill_manual(values = c("Connecticut" = "black", 
+                                "New York" = "grey", 
+                                "Pennsylvania" = "grey", 
+                                "New Jersey" = "grey", 
+                                "Massachusetts" = "grey", 
+                                "Maryland" = "grey", 
+                                "Virginia" = "grey", 
+                                "Wisconsin" = "grey", 
+                                "Minnesota" = "grey", 
+                                "West Virginia" = "grey", 
+                                "Rhode Island" = "grey", 
+                                "Delaware" = "grey", 
+                                "New Hampshire" = "grey", 
+                                "Maine" = "grey", 
+                                "Vermont" = "grey")) +
+  labs(title = "Reported Lyme Disease Cases by State",
+       x = "States",
+       y = "Number of Cases") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1))
+```
+The reason bar graph was used to represent the same data is because of the simplicity in comparing state to state. for example I could draw insights like "Reported Lyme Disease cases are nearly thrice as many in New Jersey than they are in Wisconsin" which can not be intuitively made through the pie chart.
+
+ 
+The reason for highlighting in this way is due to the simplicity. I have all the states other than Connecticut in one color and Connecticut in another so that eyes would draw to the different color.
+
+
+Question 2:
+
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(maps)
+library(plotly)
+
+# Get world map data
+world_map <- map_data("world")
+
+# Define the countries to highlight
+highlight_countries <- c("Italy","Spain","France","Greece","Australia","New Zealand","Thailand","Switzerland","Egypt","Canada","Netherlands", "Japan", "Portugal", "Singapore","UK")
+
+# Create a new column to indicate whether a country should be highlighted
+world_map <- world_map %>%
+  mutate(highlight = ifelse(region %in% highlight_countries, "Yes", "No"))
+
+# Create the ggplot map
+gg_map <- ggplot(data = world_map, aes(x = long, y = lat, group = group, fill = highlight)) +
+  geom_polygon(color = "black", aes(text = region)) +  # Add text aesthetic for hover
+  scale_fill_manual(values = c("No" = "lightgray", "Yes" = "red")) +
+  labs(title = "Map Highlighting top 15 Tourist Destinations",
+       fill = "Highlight") +
+  theme_void() +
+  theme(legend.position = "none")  # Remove legend if not needed
+
+# Convert ggplot to an interactive plotly plot
+interactive_map <- ggplotly(gg_map, tooltip = "text")
+
+# Display the interactive map
+interactive_map
+```
+
+Reference:
+[2] https://www.usnews.com/news/best-countries/rankings/good-for-tourism
+[3] https://www.usnews.com/news/best-countries/articles/methodology
+[4] https://www.usnews.com/news/best-countries/rankings/adventure
+
+These Top 15 destination are taken from the reference above. And the factors while ranking these countries'  was overall rank of the country and adventure ranking of the country. The metrics further used for ranking these two rankings include, Overall country rank - Diversity, Quality of Life, Entrepreneurship, and Power among other metrics. Whereas Adventure ranking is based on metrics such as the activities available for Adult to de-stress and play.
+
+Question 3:
+
+Favorite Topic:
+  I really liked this video[https://www.youtube.com/watch?v=jbkSRLYSojo] that was shown in time series. as the title suggests centuries of data can be compressed into minutes when using such visualizations.
+  
+Least Favorite Topic:
+  While I really liked the Geo Spatial topics of the course which enabled us to visualize a make to pinpoint points/areas of interest I do not like the preparation needed to get there. In_class while code along it was fun and fascinating but when working on those for the assignment from the scratch the preparation before the actual visualizaiton took way too long than anticipated.
