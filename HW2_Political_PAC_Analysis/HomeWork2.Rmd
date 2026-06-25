@@ -1,0 +1,338 @@
+---
+title: "HomeWork2"
+author: "Tallapaneni Venkateshwara Chowdary"
+date: "2024-10-03"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r}
+#install.packages("ggridges")
+#install.packages("fs")
+#install.packages("janitor")
+library(dplyr)
+library(ggridges)
+library(ggplot2)
+library(tidyverse)
+library(fs)
+library(janitor)
+```
+
+# Question 1
+A new day, a new plot, a new geom. The goal of this exercise is to learn about the plot 
+(ridgeline plot) and to learn how to make it.
+Use the geom_density_ridges() function from the ggridges package to make a ridge plot 
+of Airbnb review scores of Edinburgh neighborhoods. The neighborhoods should be 
+ordered by their median review scores. The data can be found in the data attached to the 
+assignment box, and it’s called edibnb. It is an rda that you can open with R and loads the 
+data. Also include an interpretation for your visualization (3-5 sentences). 
+(Note: This is geom was introduced in class, however, seeing another example of it in action 
+will be helpful. Read the package README at https://wilkelab.org/ggridges and/or the 
+introduction vignette at https://wilkelab.org/ggridges/articles/introduction.html. There is 
+more information than you need for this question in the vignette; the first section on 
+Geoms should be sufficient to help you get started.
+
+```{r}
+load(file='data/edibnb.rda')
+```
+
+```{r}
+edibnb
+```
+
+```{r}
+# Reference -> https://wilkelab.org/ggridges/
+ggplot(edibnb %>% drop_na(), aes(x = review_scores_rating, y = reorder(neighbourhood, -review_scores_rating, FUN = median))) +
+  geom_density_ridges(scale = 4) + 
+  scale_y_discrete(expand = c(0, 0)) +     # will generally have to set the `expand` option
+  scale_x_continuous(expand = c(0, 0)) +   # for both axes to remove unneeded padding
+  coord_cartesian(clip = "off") + # to avoid clipping of the very top of the top ridgeline
+  theme_ridges() +
+  labs(y = "neighborhood")
+```
+
+Question 1 Interpretation:
+Most of review scores are positive, with scores of equal to or higher than 80 out of 100. Bruntsfield looks like it has got the most high ratings. Although negligible you can see that there are more bumps(which indicate values) in the multiples of 20 which are 20,40,60 than there are in any other ratings.
+
+# Question 2
+Foreign Connected PACs. Only American citizens (and immigrants with green cards) can 
+contribute to federal politics, but the American divisions of foreign companies can form 
+political action committees (PACs) and collect contributions from their American 
+employees. (Source: https://www.opensecrets.org/political-action-committeespacs/foreign-connected-pacs/2020).
+In this exercise you will work with data from contributions to US political parties from 
+foreign-connected PACs. The data is stored in CSV files in the assignment box on D2L. There 
+are 11 files, each for an election cycle between 2000 and 2022.
+
+```{r}
+list_of_files <- dir_ls(path = "data", regexp = "Foreign Connected PAC")
+```
+
+```{r}
+# read all files and row bind them
+# keeping track of the file name in a new column called year
+pac <- read_csv(list_of_files, id = "year", show_col_types = FALSE)
+```
+
+2.a) First, clean the names of the variables in the dataset with a new function from the 
+janitor package: clean_names(). Then clean and transform the data such that you 
+have something like the following at the end.
+```{r}
+names(pac)
+```
+
+```{r}
+pac <- clean_names(pac)
+```
+
+```{r}
+names(pac)
+```
+
+```{r}
+pac <- pac %>% 
+  separate(country_of_origin_parent_company, into = c("country", "parent_company"), sep = "/") %>%
+  mutate(year = str_extract(year, "(?<=-)\\d{4}")) 
+```
+
+```{r}
+pac <- subset(pac, select = -c(total))
+```
+The above pac returns the dataframe from the first step of the Question.
+
+```{r}
+pac_longer <- pac %>% 
+  pivot_longer(
+    cols = c(dems, repubs),
+    names_to = "party",
+    values_to = "amount"
+  )
+```
+
+```{r}
+summary_table_Swizz <- pac_longer %>% 
+  mutate(amount = str_remove(amount, "[\\$,]")) %>% 
+  mutate(amount = as.numeric(amount)) %>%
+  filter(country == "Switzerland") %>% 
+  group_by(year, party) %>% 
+  summarise(total_amount = sum(amount))
+```
+
+```{r}
+ggplot(summary_table_Swizz, aes(x=year, y=total_amount, color = party, group = party)) +
+  geom_line(size = 1) +
+  theme_minimal()
+```
+
+Question 2 Interpretation:
+Interesting enough you can see that Switzerland have always favored republics over democrat which is not the case only twice in 22 years that was in the year 2008 and 2022 and even at those times there was only a very small difference. You can also see that in 2008 and 2010 Switzerland's contribution to both the US's political parties was very similar. From the graph it seems Switzerland played its biggest part in the 2016's US Presidential Election.
+
+# Question 3
+Median housing prices in the US. The inspiration and the data for this exercise comes 
+from https://fred.stlouisfed.org/series/MSPUS. The two datasets you’ll use are 
+median_housing and recessions, both of which are in the assignment box in D2L.
+
+3.a)Load the two datasets using read_csv()
+```{r}
+median_housing <- read_csv("data/median-housing.csv")
+
+recessions <- read_csv("data/recessions.csv")
+
+```
+
+3.b) Rename the variables as date and price
+```{r}
+colnames(median_housing) <- c("date", "price")
+```
+
+3.c) Create the following visualization
+```{r}
+ggplot(median_housing, aes(x = date, y = price)) +
+  geom_line(color = "royalblue", size = 1) +
+  labs(
+    title = "Median sales price of houses sold in the United States",
+    subtitle = "Not seasonally adjusted",
+    x = "",
+    y = "Dollars"
+  ) +
+  scale_y_continuous(breaks = seq(0, 400000, by = 40000)) +
+  scale_x_date(breaks = seq(as.Date("1965-01-01"), 
+                            as.Date("2020-01-01"), 
+                            by = "5 years"),
+               date_labels = "%Y") +
+  theme_minimal() +
+   theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_line(color = "grey90", size = 0.5),
+    panel.grid.minor.y = element_blank()
+  )
+```
+
+3.d) Identify recessions that happened during the time frame of the median_housing
+dataset. Do this by adding a new variable to recessions that takes the value TRUE if 
+the recession happened during this time frame and FALSE if not
+```{r}
+recessions <- recessions %>%
+  mutate(during_housing = if_else(Peak >= min(median_housing$date) &
+                                  Trough <= max(median_housing$date), TRUE, FALSE))
+```
+
+3.e) Now recreate the following visualization. The shaded areas are recessions that 
+happened during the time frame of the median_housing dataset. Hint: The shaded 
+areas are “behind” the line
+```{r}
+ggplot() +
+  geom_line(data = median_housing, aes(x = date, y = price), color = "royalblue", size = 1) +
+  geom_rect(data = recessions %>% filter(during_housing == TRUE),
+            aes(xmin = Peak, xmax = Trough, ymin = -Inf, ymax = Inf), fill = "grey", alpha = 0.5) +
+  labs(
+    title = "Median sales price of houses sold in the United States",
+    subtitle = "Not seasonally adjusted",
+    x = "",
+    y = "Dollars"
+  ) +
+  scale_y_continuous(breaks = seq(0, 400000, by = 40000)) +
+  scale_x_date(breaks = seq(as.Date("1965-01-01"), 
+                            as.Date("2020-01-01"), 
+                            by = "5 years"),
+               date_labels = "%Y") +
+  theme_minimal() +
+   theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_line(color = "grey90", size = 0.5),
+    panel.grid.minor.y = element_blank()
+  )
+```
+
+3.f) Create a subset of the median_housing dataset for data from 2019 and 2020 early. 
+Add two columns: year and quarter. year is the year of the date and quarter takes 
+the values Q1, Q2, Q3, or Q4 based on date.
+```{r}
+median_housing_subset <- median_housing %>%
+  filter(date >= as.Date("2019-01-01") & date <= as.Date("2020-12-31")) %>%
+  mutate(year = format(date, "%Y"),
+         quarter = case_when(
+           format(date, "%m") %in% c("01", "02", "03") ~ "Q1",
+           format(date, "%m") %in% c("04", "05", "06") ~ "Q2",
+           format(date, "%m") %in% c("07", "08", "09") ~ "Q3",
+           TRUE ~ "Q4"
+         ))
+```
+
+3.g) Create the following visualization
+```{r}
+ggplot(median_housing_subset, aes(x = date, y = price)) +
+  geom_line(color = "royalblue", size = 1) +
+  geom_point(color = "royalblue", size = 2) + 
+  scale_y_continuous(labels = scales::comma) +  # Keep full dollar units
+  scale_x_date(
+    breaks = "3 months",
+    labels = function(x) {
+      quarters <- quarter(x)
+      years <- format(x, "%Y")
+      labels <- paste0(c("Q1", "Q2", "Q3", "Q4")[quarters], "\n", years)
+      return(labels)
+    }
+  ) +
+  labs(
+    title = "Median sales price of houses sold in the United States",
+    subtitle = "Not seasonally adjusted",
+    x = "",
+    y = "Dollars"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(margin = margin(t = 10)))
+```
+
+Question 3 Thoughts:
+I tried to recreate the x-axis code as well could not.
+
+# Question 4
+Expect More. Plot More. Make the following image (it’s the logo for the retail store Target) 
+using ggplot2. 
+
+```{r}
+# Reference : https://stackoverflow.com/questions/6862742/draw-a-circle-with-ggplot2
+create_circle <- function(center = c(0, 0), radius = 1, npoints = 100) {
+  theta <- seq(0, 2 * pi, length.out = npoints)
+  tibble(
+    x = center[1] + radius * cos(theta),
+    y = center[2] + radius * sin(theta)
+  )
+}
+
+# Create the three circles for the Target logo
+outer_circle <- create_circle(center = c(0, 0), radius = 10)
+middle_circle <- create_circle(center = c(0, 0), radius = 7)
+inner_circle <- create_circle(center = c(0, 0), radius = 3)
+```
+
+```{r}
+# Plot the Target logo using ggplot2
+# Reference for Target logo color is https://www.brandcolorcode.com/target
+ggplot() +
+  # Outer red circle
+  geom_polygon(data = outer_circle, aes(x = x, y = y), fill = "#CC0000") +
+  
+  # Middle white circle
+  geom_polygon(data = middle_circle, aes(x = x, y = y), fill = "white") +
+  
+  # Inner red circle
+  geom_polygon(data = inner_circle, aes(x = x, y = y), fill = "#CC0000") +
+  
+  # Adding "TARGET" and trademark symbol text at the bottom
+  annotate("text", x = 0, y = -12, label = "TARGET", size = 8, color = "#CC0000", fontface = "bold") +
+  annotate("text", x = 4, y = -12.5, label = "\u00AE", size = 7, color = "#CC0000", fontface = "bold") +
+
+  coord_fixed() +
+  theme_void()
+```
+
+Question 4 Interpretation:
+The Idea behind the Target logo design is simple draw 3 concentric circles - Outer, Middle, Inner, With Outer and Inner circles filled with red color and the Middle circle is filled with white.
+
+# Question 5
+Mirror, mirror on the wall, who’s the ugliest of them all? Make a plot of the variables in 
+the penguins dataset from the {palmerpenguins} package. Your plot should use at least 
+two variables, but more is fine too. First, make the plot using the default theme and color 
+scales. Then, update the plot to be as ugly as possible. You will probably want to play 
+around with theme options, colors, fonts, etc. The ultimate goal is the ugliest possible plot, 
+and the sky is the limit!
+
+```{r}
+#install.packages("palmerpenguins")
+```
+
+```{r}
+library(palmerpenguins)
+```
+
+```{r}
+ggplot(data = penguins, aes(x = bill_length_mm, y = flipper_length_mm, color = species)) +
+  geom_point() +
+  labs(title = "Default Penguin Plot", x = "Bill Length (mm)", y = "Flipper Length (mm)")
+```
+
+```{r}
+ggplot(data = penguins, aes(x = bill_length_mm, y = flipper_length_mm, color = species)) +
+  geom_point(size = 5) +
+  labs(title = "Default Penguin Plot", x = "Bill Length (mm)", y = "Flipper Length (mm)") +
+  theme(
+    plot.background = element_rect(fill = "yellow"),
+    axis.text = element_text(size = 14, color = "white"),
+    axis.title = element_text(size = 20, color = "pink"),
+    plot.title = element_text(size = 24, color = "orange", hjust = 0.5),
+    legend.position = "top",
+    panel.background = element_rect(fill = "darkgrey")
+  )
+```
+
+Question 5 Thoughts:
+I am bringing back the yellow background from week 1(Its still imprinted in my mind). I really do not like the grey background I personally think its ugly especially with a dark colored points. The axis text are not that visible due to the light colors on yellow background. The size of the points is on the bigger side with makes it so that not a lot of interpretations can be made through them.
+
+# Reference
+1) https://wilkelab.org/ggridges/
+2) https://stackoverflow.com/questions/6862742/draw-a-circle-with-ggplot2
+3) https://www.brandcolorcode.com/target
